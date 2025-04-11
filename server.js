@@ -3,12 +3,10 @@ const cors = require('cors');
 const Base64ToPdfConverter = require('./base64ToPdf');
 
 const app = express();
-const port = 3000;
-const host = '0.0.0.0'; // Tüm IP'lerden gelen bağlantılara izin ver
 
 // Middleware
 app.use(cors({
-    origin: '*', // Tüm originlere izin ver
+    origin: '*',
     methods: ['POST', 'GET', 'OPTIONS'],
     allowedHeaders: ['Content-Type']
 }));
@@ -16,17 +14,15 @@ app.use(express.json({ limit: '50mb' }));
 
 const converter = new Base64ToPdfConverter();
 
-// Test için basit bir GET endpoint'i ekleyelim
+// Test için basit bir GET endpoint'i
 app.get('/test', (req, res) => {
     res.json({ message: 'Sunucu çalışıyor!' });
 });
 
 app.post('/api/extract-barcode', async (req, res) => {
     try {
-        // Base64 verisini al
         const { base64String } = req.body;
         
-        // Base64 verisi kontrolü
         if (!base64String) {
             return res.status(400).json({
                 success: false,
@@ -35,7 +31,6 @@ app.post('/api/extract-barcode', async (req, res) => {
             });
         }
 
-        // Base64 formatı kontrolü
         if (!/^[A-Za-z0-9+/=]+$/.test(base64String)) {
             return res.status(400).json({
                 success: false,
@@ -44,7 +39,6 @@ app.post('/api/extract-barcode', async (req, res) => {
             });
         }
 
-        // Barkod numarasını çıkar
         const barcodeNumber = await converter.extractNumberFromBase64(base64String);
         
         if (!barcodeNumber) {
@@ -55,7 +49,6 @@ app.post('/api/extract-barcode', async (req, res) => {
             });
         }
 
-        // Başarılı yanıt
         return res.status(200).json({
             success: true,
             data: {
@@ -75,16 +68,5 @@ app.post('/api/extract-barcode', async (req, res) => {
     }
 });
 
-app.listen(port, host, () => {
-    console.log(`API sunucusu http://${host}:${port} adresinde çalışıyor`);
-    console.log('API Endpoint: POST /api/extract-barcode');
-    // Tüm ağ arayüzlerini göster
-    const networkInterfaces = require('os').networkInterfaces();
-    Object.keys(networkInterfaces).forEach(interfaceName => {
-        networkInterfaces[interfaceName].forEach(interface => {
-            if (interface.family === 'IPv4' && !interface.internal) {
-                console.log(`http://${interface.address}:${port}`);
-            }
-        });
-    });
-}); 
+// Vercel için export
+module.exports = app; 
