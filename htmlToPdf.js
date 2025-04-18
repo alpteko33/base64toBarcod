@@ -1,16 +1,16 @@
-const htmlPdf = require('html-pdf');
+const chromium = require('@sparticuz/chromium');
+const puppeteer = require('puppeteer-core');
 
 class HtmlToPdfConverter {
     constructor() {
         this.defaultOptions = {
             format: 'A4',
-            border: {
+            margin: {
                 top: '10mm',
                 right: '10mm',
                 bottom: '10mm',
                 left: '10mm'
-            },
-            timeout: 30000
+            }
         };
     }
 
@@ -20,26 +20,28 @@ class HtmlToPdfConverter {
      * @param {Object} options - PDF oluşturma seçenekleri (isteğe bağlı)
      * @returns {Promise<Buffer>} Oluşturulan PDF'in buffer'ı
      */
-    convertToPdf(htmlContent, options = {}) {
-        return new Promise((resolve, reject) => {
-            try {
-                // Varsayılan seçeneklerle kullanıcı seçeneklerini birleştir
-                const pdfOptions = { ...this.defaultOptions, ...options };
-                
-                // HTML'den PDF oluştur
-                htmlPdf.create(htmlContent, pdfOptions).toBuffer((err, buffer) => {
-                    if (err) {
-                        console.error('PDF oluşturma hatası:', err);
-                        reject(err);
-                    } else {
-                        resolve(buffer);
-                    }
-                });
-            } catch (error) {
-                console.error('Dönüştürme hatası:', error);
-                reject(error);
-            }
-        });
+    async convertToPdf(htmlContent, options = {}) {
+        try {
+            const browser = await puppeteer.launch({
+                args: chromium.args,
+                defaultViewport: chromium.defaultViewport,
+                executablePath: await chromium.executablePath(),
+                headless: true,
+                ignoreHTTPSErrors: true
+            });
+
+            const page = await browser.newPage();
+            await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+            
+            const pdfOptions = { ...this.defaultOptions, ...options };
+            const buffer = await page.pdf(pdfOptions);
+            
+            await browser.close();
+            return buffer;
+        } catch (error) {
+            console.error('PDF oluşturma hatası:', error);
+            throw error;
+        }
     }
 
     /**
